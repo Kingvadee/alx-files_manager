@@ -1,42 +1,44 @@
 import { createClient } from 'redis';
 import { promisify } from 'util';
 
+// class to define methods for commonly used redis commands
 class RedisClient {
   constructor() {
-    this.client = createClient({
-      host: '127.0.0.1',
-      port: 6379,
-    });
-
+    this.client = createClient();
     this.client.on('error', (error) => {
       console.log(`Redis client not connected to server: ${error}`);
     });
-
-    // Promisify the Redis client methods
-    this.client.getAsync = promisify(this.client.get).bind(this.client);
-    this.client.setAsync = promisify(this.client.set).bind(this.client);
-    this.client.delAsync = promisify(this.client.del).bind(this.client);
   }
 
+  // check connection status and report
   isAlive() {
-    return this.client.connected;
+    if (this.client.connected) {
+      return true;
+    }
+    return false;
   }
 
+  // get value for given key from redis server
   async get(key) {
-    return this.client.getAsync(key);
+    const redisGet = promisify(this.client.get).bind(this.client);
+    const value = await redisGet(key);
+    return value;
   }
 
+  // set key value pair to redis server
   async set(key, value, time) {
-    await this.client.setAsync(key, value);
+    const redisSet = promisify(this.client.set).bind(this.client);
+    await redisSet(key, value);
     await this.client.expire(key, time);
   }
 
+  // del key vale pair from redis server
   async del(key) {
-    return this.client.delAsync(key);
+    const redisDel = promisify(this.client.del).bind(this.client);
+    await redisDel(key);
   }
 }
 
 const redisClient = new RedisClient();
 
-export default redisClient;
-
+module.exports = redisClient;
